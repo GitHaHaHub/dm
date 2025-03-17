@@ -1,0 +1,41 @@
+name: Sync Main to Release (Squash Merge Style)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  squash-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Important: full history needed for rebase/squash logic
+
+      - name: Set up Git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+      - name: Fetch release branch
+        run: |
+          git fetch origin release || echo "No release branch yet"
+
+      - name: Create a squash commit from main
+        run: |
+          # Create a new temp branch based on release
+          git checkout -B temp-release origin/release || git checkout -b temp-release
+
+          # Merge all main changes into temp-release as a squash commit
+          git merge --squash origin/main
+
+          # Commit with a standard message (customize this if needed)
+          VERSION=$(git describe --tags --abbrev=0 || echo "v0.0.0")
+          git commit -m "chore(release): squash merge from main $VERSION"
+
+      - name: Push to release branch
+        run: |
+          git push origin temp-release:release --force
